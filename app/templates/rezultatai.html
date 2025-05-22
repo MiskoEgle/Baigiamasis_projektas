@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Rezultatai{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Rezultatai</h1>
+    
+    <!-- Skirtukai -->
+    <ul class="nav nav-tabs custom-tabs mb-4" id="resultsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="training-tab" data-bs-toggle="tab" href="#training" role="tab" aria-controls="training" aria-selected="true">Mokymo rezultatai</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="testing-tab" data-bs-toggle="tab" href="#testing" role="tab" aria-controls="testing" aria-selected="false">Testavimo rezultatai</a>
+        </li>
+    </ul>
+
+    <!-- Turinys -->
+    <div class="tab-content" id="resultsTabsContent">
+        <!-- Mokymo rezultatai -->
+        <div class="tab-pane fade show active" id="training" role="tabpanel" aria-labelledby="training-tab">
+            <div class="row mb-4">
+                <div class="col">
+                    <form method="GET" class="form-inline">
+                        <div class="form-group mx-2">
+                            <label for="modelio_tipas" class="mr-2">Modelio tipas:</label>
+                            <select name="modelio_tipas" id="modelio_tipas" class="form-control">
+                                <option value="">Visi</option>
+                                <option value="knn" {% if request.args.get('modelio_tipas') == 'knn' %}selected{% endif %}>KNN</option>
+                                <option value="cnn" {% if request.args.get('modelio_tipas') == 'cnn' %}selected{% endif %}>CNN</option>
+                                <option value="transformer" {% if request.args.get('modelio_tipas') == 'transformer' %}selected{% endif %}>Transformer</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Filtruoti</button>
+                    </form>
+                </div>
+            </div>
+
+            {% if results %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Modelio tipas</th>
+                            <th>Duomenų failas</th>
+                            <th>Pavyzdziu skaicius</th>
+                            <th>Metrikos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr>
+                            <td>{{ result.data }}</td>
+                            <td>{{ result.modelio_tipas }}</td>
+                            <td>{{ result.duomenu_failas }}</td>
+                            <td>{{ result.pavyzdziu_skaicius }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#metrikos{{ loop.index }}" aria-expanded="false">
+                                    Rodyti metrikas
+                                </button>
+                                <div class="collapse mt-2" id="metrikos{{ loop.index }}">
+                                    <div class="card card-body">
+                                        <p><strong>Tikslumas:</strong> {{ "%.2f"|format(result.rezultatai.tikslumas * 100) }}%</p>
+                                        <p><strong>Preciziškumas:</strong> {{ "%.2f"|format(result.rezultatai.preciziškumas * 100) }}%</p>
+                                        <p><strong>Atgaminimas:</strong> {{ "%.2f"|format(result.rezultatai.atgaminimas * 100) }}%</p>
+                                        <p><strong>F1 balas:</strong> {{ "%.2f"|format(result.rezultatai.f1_balas * 100) }}%</p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                Mokymo rezultatų nėra.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Testavimo rezultatai -->
+        <div class="tab-pane fade" id="testing" role="tabpanel" aria-labelledby="testing-tab">
+            <div class="row mb-4">
+                <div class="col">
+                    <form method="GET" class="form-inline">
+                        <input type="hidden" name="tab" value="testing">
+                        <div class="form-group mx-2">
+                            <label for="test_modelio_tipas" class="mr-2">Modelio tipas:</label>
+                            <select name="modelio_tipas" id="test_modelio_tipas" class="form-control">
+                                <option value="">Visi</option>
+                                <option value="knn" {% if request.args.get('modelio_tipas') == 'knn' %}selected{% endif %}>KNN</option>
+                                <option value="cnn" {% if request.args.get('modelio_tipas') == 'cnn' %}selected{% endif %}>CNN</option>
+                                <option value="transformer" {% if request.args.get('modelio_tipas') == 'transformer' %}selected{% endif %}>Transformer</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Filtruoti</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="row">
+                {% for test_result in test_results %}
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <img src="{{ url_for('static', filename=test_result.paveiksliuko_kelias.replace('app/static/', '')) }}" 
+                             class="card-img-top" alt="Testinis paveiksliukas">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ test_result.zenklo_pavadinimas }}</h5>
+                            <p class="card-text">
+                                <strong>Modelis:</strong> {{ test_result.modelio_tipas.upper() }} - {{ test_result.modelio_pavadinimas }}<br>
+                                <strong>Data:</strong> {{ test_result.data.strftime('%Y-%m-%d %H:%M:%S') }}<br>
+                                <strong>Tikimybė:</strong> {{ "%.2f"|format(test_result.tikimybe * 100) }}%
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if not test_results %}
+            <div class="alert alert-info">
+                Testavimo rezultatų nėra.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Mygtukas modalo atidarymui -->
+    <div class="mb-3">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#testavimoModal">
+            Testuoti modelį
+        </button>
+    </div>
+
+    <!-- Modalas -->
+    <div class="modal fade" id="testavimoModal" tabindex="-1" aria-labelledby="testavimoModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="testavimoModalLabel">Modelio testavimas</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Uždaryti"></button>
+          </div>
+          <div class="modal-body">
+            <form id="test-form" enctype="multipart/form-data" method="POST" action="{{ url_for('main.prognoze') }}">
+                <div class="form-group mb-2">
+                    <label for="image">Pasirinkite paveikslėlį:</label>
+                    <input type="file" id="image" name="file" accept=".png,.jpg,.jpeg" required class="form-control">
+                </div>
+                <div class="form-group mb-2">
+                    <label for="model-type">Pasirinkite modelio tipą:</label>
+                    <select id="model-type" name="modelio_tipas" required class="form-control" onchange="toggleModelSelect()">
+                        <option value="knn">KNN Modelis</option>
+                        <option value="cnn">CNN Modelis</option>
+                        <option value="transformer">Transformer Modelis</option>
+                    </select>
+                </div>
+                <div class="form-group mb-2" id="knn-model-select-group">
+                    <label for="modelio_pavadinimas_knn">Pasirinkite KNN modelį:</label>
+                    <select id="modelio_pavadinimas_knn" name="modelio_pavadinimas_knn" class="form-control">
+                        {% for model in knn_modeliai %}
+                            <option value="{{ model.pavadinimas }}">{{ model.pavadinimas }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mb-2" id="cnn-model-select-group">
+                    <label for="modelio_pavadinimas_cnn">Pasirinkite CNN modelį:</label>
+                    <select id="modelio_pavadinimas_cnn" name="modelio_pavadinimas_cnn" class="form-control">
+                        {% for model in cnn_modeliai %}
+                            <option value="{{ model.pavadinimas }}">{{ model.pavadinimas }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mb-2" id="transformer-model-select-group">
+                    <label for="modelio_pavadinimas_transformer">Pasirinkite Transformer modelį:</label>
+                    <select id="modelio_pavadinimas_transformer" name="modelio_pavadinimas_transformer" class="form-control">
+                        {% for model in transformer_modeliai %}
+                            <option value="{{ model.pavadinimas }}">{{ model.pavadinimas }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Testuoti Modelį</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Išsaugoti aktyvų skirtuką URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab === 'testing') {
+        document.getElementById('testing-tab').click();
+    }
+    
+    // Atnaujinti URL kai pasirenkamas skirtukas
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-bs-target').substring(1);
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', tabId);
+            window.history.pushState({}, '', url);
+        });
+    });
+
+    toggleModelSelect();
+});
+
+function toggleModelSelect() {
+    var modelType = document.getElementById('model-type').value;
+    // Rodyti tik atitinkamą select ir priskirti jam name="modelio_pavadinimas_*"
+    document.getElementById('knn-model-select-group').style.display = (modelType === 'knn') ? 'block' : 'none';
+    document.getElementById('cnn-model-select-group').style.display = (modelType === 'cnn') ? 'block' : 'none';
+    document.getElementById('transformer-model-select-group').style.display = (modelType === 'transformer') ? 'block' : 'none';
+
+    document.getElementById('modelio_pavadinimas_knn').removeAttribute('name');
+    document.getElementById('modelio_pavadinimas_cnn').removeAttribute('name');
+    document.getElementById('modelio_pavadinimas_transformer').removeAttribute('name');
+    if (modelType === 'knn') {
+        document.getElementById('modelio_pavadinimas_knn').setAttribute('name', 'modelio_pavadinimas_knn');
+    } else if (modelType === 'cnn') {
+        document.getElementById('modelio_pavadinimas_cnn').setAttribute('name', 'modelio_pavadinimas_cnn');
+    } else if (modelType === 'transformer') {
+        document.getElementById('modelio_pavadinimas_transformer').setAttribute('name', 'modelio_pavadinimas_transformer');
+    }
+}
+</script>
+{% endblock %}
+{% endblock %} 
